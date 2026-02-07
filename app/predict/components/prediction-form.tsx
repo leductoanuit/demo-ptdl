@@ -53,15 +53,29 @@ export function PredictionForm({ onResult }: PredictionFormProps) {
       .catch((err) => console.error("Failed to load districts:", err));
   }, []);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    // Client-side validation
+    if (!formData.dien_tich || formData.dien_tich <= 20) {
+      setError("Diện tích phải lớn hơn 20 m²");
+      return;
+    }
+    if (!formData.quan || !formData.noi_that || !formData.phap_ly) {
+      setError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await fetchPrediction(formData);
       onResult(result);
-    } catch (error) {
-      console.error("Prediction failed:", error);
-      alert("Không thể dự đoán giá. Vui lòng kiểm tra lại thông tin.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Lỗi không xác định";
+      setError(`Không thể dự đoán giá: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -212,6 +226,12 @@ export function PredictionForm({ onResult }: PredictionFormProps) {
               />
             </div>
           </div>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Đang dự đoán..." : "Dự đoán giá"}

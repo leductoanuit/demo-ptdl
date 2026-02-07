@@ -4,12 +4,12 @@ import { Bar } from "react-chartjs-2";
 import { chartColors, defaultChartOptions } from "@/lib/chart-utils";
 
 interface PriceHistogramChartProps {
-  data: { bin: string; count: number }[];
+  data: { range: string; count: number }[];
 }
 
 export function PriceHistogramChart({ data }: PriceHistogramChartProps) {
   const chartData = {
-    labels: data.map((d) => d.bin),
+    labels: data.map((d) => d.range),
     datasets: [
       {
         label: "Số lượng căn hộ",

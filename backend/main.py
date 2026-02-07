@@ -15,7 +15,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from model import train_model, build_prediction_features, FEATURE_COLS
+from model import train_model, train_all_models, build_prediction_features, FEATURE_COLS
 
 # --- Global state populated on startup ---
 model = None
@@ -23,6 +23,7 @@ cached_stats: dict = {}
 district_data: list[dict] = []
 district_rank_map: dict[str, float] = {}
 df_clean_global: pd.DataFrame = pd.DataFrame()
+comparison_data: dict = {}
 
 
 # --- Pydantic schemas ---
@@ -47,7 +48,7 @@ class PredictionOutput(BaseModel):
 # --- Startup / shutdown ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global model, cached_stats, district_data, district_rank_map, df_clean_global
+    global model, cached_stats, district_data, district_rank_map, df_clean_global, comparison_data
 
     csv_path = os.path.join(os.path.dirname(__file__), "data", "apartments.csv")
     print(f"Training model from {csv_path}...")
@@ -77,6 +78,11 @@ async def lifespan(app: FastAPI):
         for _, row in district_agg.sort_values("avg_price", ascending=False).iterrows()
     ]
 
+    # Train all models for comparison page
+    print("Training comparison models...")
+    comparison_data = train_all_models(csv_path)
+    print(f"Comparison models trained: {len(comparison_data['metrics'])} models")
+
     yield  # app runs
     print("Shutting down...")
 
@@ -104,6 +110,12 @@ def get_stats():
 @app.get("/api/districts")
 def get_districts():
     return district_data
+
+
+@app.get("/api/model-comparison")
+def get_model_comparison():
+    """Return pre-computed model comparison data."""
+    return comparison_data
 
 
 @app.get("/api/chart-data")

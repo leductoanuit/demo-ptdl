@@ -15,7 +15,9 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 
 # Columns to drop during cleaning (matching notebook exactly)
@@ -106,6 +108,84 @@ def train_model(csv_path: str) -> tuple[XGBRegressor, float, pd.DataFrame, dict]
     r2 = r2_score(y_test, y_pred)
 
     return model, r2, df_clean, rank_map
+
+
+def train_all_models(csv_path: str) -> dict:
+    """Train LR, Ridge, RF, XGBoost and return comparison data."""
+    df_clean = load_and_clean(csv_path)
+    X, y, rank_map = engineer_features(df_clean)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # District avg prices for direction accuracy
+    district_avg_map = df_clean.groupby("quan")["gia"].mean().to_dict()
+    # Map test indices back to district names
+    test_districts = df_clean.loc[y_test.index, "quan"]
+    test_district_avgs = test_districts.map(district_avg_map).values
+
+    models = {
+        "lr": LinearRegression(),
+        "ridge": Ridge(alpha=1.0),
+        "rf": RandomForestRegressor(n_estimators=100, random_state=42),
+        "xgb": XGBRegressor(n_estimators=100, learning_rate=0.1, max_depth=6, random_state=42),
+    }
+    model_names = {
+        "lr": "Hồi quy tuyến tính",
+        "ridge": "Ridge",
+        "rf": "Random Forest",
+        "xgb": "XGBoost",
+    }
+
+    metrics = []
+    predictions_by_model = {}
+    direction_accuracy = []
+
+    for key, mdl in models.items():
+        mdl.fit(X_train, y_train)
+        y_pred = mdl.predict(X_test)
+        predictions_by_model[key] = y_pred
+
+        r2 = r2_score(y_test, y_pred)
+        rmse = float(np.sqrt(mean_squared_error(y_test, y_pred)))
+        mae = float(mean_absolute_error(y_test, y_pred))
+        metrics.append({"name": model_names[key], "r2": round(r2, 4), "rmse": round(rmse), "mae": round(mae)})
+
+        # Direction accuracy: predicted above/below district avg vs actual
+        pred_above = y_pred > test_district_avgs
+        actual_above = y_test.values > test_district_avgs
+        acc = float(np.mean(pred_above == actual_above))
+        direction_accuracy.append({"name": model_names[key], "accuracy": round(acc, 4)})
+
+    # Sample 50 test points for scatter chart
+    n_samples = min(50, len(y_test))
+    rng = np.random.RandomState(42)
+    sample_idx = rng.choice(len(y_test), size=n_samples, replace=False)
+    y_test_arr = y_test.values
+    predictions = []
+    for i in sample_idx:
+        predictions.append({
+            "actual": round(float(y_test_arr[i])),
+            "lr": round(float(predictions_by_model["lr"][i])),
+            "ridge": round(float(predictions_by_model["ridge"][i])),
+            "rf": round(float(predictions_by_model["rf"][i])),
+            "xgb": round(float(predictions_by_model["xgb"][i])),
+        })
+
+    # Feature importance (tree-based models only)
+    rf_imp = models["rf"].feature_importances_
+    xgb_imp = models["xgb"].feature_importances_
+    feature_importance = [
+        {"feature": name, "rf": round(float(rf_imp[i]), 4), "xgb": round(float(xgb_imp[i]), 4)}
+        for i, name in enumerate(FEATURE_COLS)
+    ]
+    # Sort by max importance descending
+    feature_importance.sort(key=lambda x: max(x["rf"], x["xgb"]), reverse=True)
+
+    return {
+        "metrics": metrics,
+        "predictions": predictions,
+        "direction_accuracy": direction_accuracy,
+        "feature_importance": feature_importance,
+    }
 
 
 def build_prediction_features(

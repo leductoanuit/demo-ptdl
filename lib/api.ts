@@ -19,7 +19,7 @@ export interface District {
 export interface ChartDataResponse {
   price_by_district: { district: string; avg_price_m2: number }[];
   area_price_data: { area: number; price: number }[];
-  price_bins: { bin: string; count: number }[];
+  price_bins: { range: string; count: number }[];
   feature_importance: { feature: string; importance: number }[];
   legal_status_distribution: { status: string; count: number }[];
 }
@@ -40,6 +40,13 @@ export interface PredictionResult {
   district_avg_price: number;
   comparison: string;
   input_summary: Record<string, string | number>;
+}
+
+export interface ModelComparisonResponse {
+  metrics: { name: string; r2: number; rmse: number; mae: number }[];
+  predictions: { actual: number; lr: number; ridge: number; rf: number; xgb: number }[];
+  direction_accuracy: { name: string; accuracy: number }[];
+  feature_importance: { feature: string; rf: number; xgb: number }[];
 }
 
 // API Functions
@@ -74,7 +81,16 @@ export async function fetchPrediction(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!response.ok) throw new Error("Failed to fetch prediction");
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `Prediction failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchModelComparison(): Promise<ModelComparisonResponse> {
+  const response = await fetch(`${API_URL}/api/model-comparison`);
+  if (!response.ok) throw new Error("Failed to fetch model comparison");
   return response.json();
 }
 

@@ -10,6 +10,7 @@ export function Navbar() {
     { href: "/", label: "Trang chủ" },
     { href: "/dashboard", label: "Bảng điều khiển" },
     { href: "/predict", label: "Dự đoán giá" },
+    { href: "/models", label: "So sánh mô hình" },
   ];
 
   return (

@@ -42,7 +42,7 @@ ChartJS.register(
 export default function DashboardPage() {
   const [chartData, setChartData] = useState<ChartDataResponse | null>(null);
   const [districts, setDistricts] = useState<District[]>([]);
-  const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +57,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchChartData(selectedDistrict || undefined)
+    fetchChartData(selectedDistrict === "all" ? undefined : selectedDistrict)
       .then((data) => {
         setChartData(data);
         setLoading(false);
@@ -102,7 +102,7 @@ export default function DashboardPage() {
               <SelectValue placeholder="Tất cả quận/huyện" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tất cả quận/huyện</SelectItem>
+              <SelectItem value="all">Tất cả quận/huyện</SelectItem>
               {districts.map((district) => (
                 <SelectItem key={district.name} value={district.name}>
                   {district.name}
