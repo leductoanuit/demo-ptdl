@@ -68,6 +68,10 @@ export function PredictionForm({ onResult }: PredictionFormProps) {
       setError("Vui lòng điền đầy đủ thông tin");
       return;
     }
+    if (formData.khoang_cach_q1_km > 25) {
+      setError("Khoảng cách đến Q1 tối đa 25 km");
+      return;
+    }
 
     setLoading(true);
     try {

@@ -1,93 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { StatsCard } from "./components/stats-card";
-import {
-  fetchStats,
-  formatPrice,
-  formatNumber,
-  formatPercentage,
-  type StatsResponse,
-} from "@/lib/api";
+import { useState } from "react";
+import { PredictionForm } from "./predict/components/prediction-form";
+import { PredictionResultCard } from "./predict/components/prediction-result";
+import type { PredictionResult } from "@/lib/api";
 
 export default function Home() {
-  const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchStats()
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <div className="h-12 w-3/4 mx-auto bg-gray-200 rounded animate-pulse mb-4" />
-          <div className="h-6 w-1/2 mx-auto bg-gray-200 rounded animate-pulse" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-gray-200 rounded animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-          <p className="font-semibold">Lỗi tải dữ liệu</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  const [result, setResult] = useState<PredictionResult | null>(null);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Phân Tích Giá Căn Hộ
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Dự đoán giá căn hộ
         </h1>
-        <p className="text-xl text-gray-600">Thành phố Hồ Chí Minh</p>
-        <p className="mt-4 text-gray-500 max-w-2xl mx-auto">
-          Hệ thống phân tích và dự đoán giá căn hộ sử dụng mô hình XGBoost
-          dựa trên dữ liệu thị trường bất động sản TP.HCM
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Nhập thông tin căn hộ để dự đoán giá bằng mô hình XGBoost được huấn
+          luyện trên dữ liệu thị trường bất động sản TP.HCM
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Tổng số căn hộ"
-          value={formatNumber(stats?.total_listings || 0)}
-          description="Số lượng căn hộ trong cơ sở dữ liệu"
-        />
-        <StatsCard
-          title="Giá trung bình"
-          value={formatPrice(stats?.avg_price || 0)}
-          description={`${formatNumber(Math.round(stats?.avg_price_per_m2 || 0))} VNĐ/m²`}
-        />
-        <StatsCard
-          title="Số quận/huyện"
-          value={stats?.num_districts || 0}
-          description="Phủ sóng toàn TP.HCM"
-        />
-        <StatsCard
-          title="Độ chính xác mô hình"
-          value={formatPercentage(stats?.model_r2_score || 0)}
-          description="R² Score của mô hình XGBoost"
-        />
+      <div className="grid gap-6 md:grid-cols-2 max-w-5xl mx-auto">
+        <div>
+          <PredictionForm onResult={setResult} />
+        </div>
+        <div>
+          {result ? (
+            <PredictionResultCard result={result} />
+          ) : (
+            <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg">
+              <p className="text-gray-400 text-center px-4">
+                Nhập thông tin và nhấn &quot;Dự đoán giá&quot; để xem kết quả
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

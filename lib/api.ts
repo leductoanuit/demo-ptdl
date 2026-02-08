@@ -83,7 +83,11 @@ export async function fetchPrediction(
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Prediction failed: ${response.status}`);
+    // Pydantic returns detail as array of validation errors
+    const detail = Array.isArray(err.detail)
+      ? err.detail.map((e: { loc?: string[]; msg?: string }) => `${e.loc?.slice(-1)[0]}: ${e.msg}`).join("; ")
+      : err.detail || `Prediction failed: ${response.status}`;
+    throw new Error(detail);
   }
   return response.json();
 }
